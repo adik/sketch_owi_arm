@@ -1,0 +1,85 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+  
+<head>
+  	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js" type="text/javascript"></script>
+</head>
+  
+<body>
+  
+<script type="text/javascript">
+var socket;
+var holded = false;
+
+$(document).ready(function() {
+
+  socket = new WebSocket('ws://127.0.0.1:8080');
+  socket.onmessage = function(mess) {
+    $('#debug').text(mess.data);
+  };
+  
+  
+  
+  $("input[type=button]").bind ({
+  	mousedown : function(e) {
+    	down($(this));
+  	},
+  	mouseup : function(e) {
+    	if (holded) up($(this));
+  	},
+  	mouseleave : function(e) {
+    	if (holded) up($(this));
+  	}
+  });
+
+});
+
+function down(o) {
+    $("#debug2").text("down")
+	socket.send('down ' + o.attr('name'))
+	holded = true;
+}
+
+function up(o) {
+	$("#debug2").text("down")
+	socket.send('up ' + o.attr('name'))
+	holded = false;
+}
+
+</script>
+  
+  
+  <div> 
+    <b>Motor 1 : </b>
+    <input type="button" name="left 1"  value=" &lt;&lt;&lt; " > <input type="button" name="right 1" value=" &gt;&gt;&gt; " >
+  </div>
+  
+  <div> 
+    <b>Motor 2 : </b>
+    <input type="button" name="left 2"  value=" &lt;&lt;&lt; " > <input type="button" name="right 2" value=" &gt;&gt;&gt; " >
+  </div>
+  
+  <div> 
+    <b>Motor 3 : </b>
+    <input type="button" name="left 3"  value=" &lt;&lt;&lt; " > <input type="button" name="right 3" value=" &gt;&gt;&gt; " >
+  </div>
+  
+  <div> 
+    <b>Motor 4 : </b>
+    <input type="button" name="left 4"  value=" &lt;&lt;&lt; " > <input type="button" name="right 4" value=" &gt;&gt;&gt; " >
+  </div>
+  
+  <div> 
+    <b>Motor 5 : </b>
+    <input type="button" name="left 5"  value=" &lt;&lt;&lt; " > <input type="button" name="right 5" value=" &gt;&gt;&gt; " >
+  </div>
+  
+  <div id="debug"></div>
+  <div id="debug2"></div>
+  <form>
+  <input type="submit">
+  </form>
+  
+  </body>
+</html>

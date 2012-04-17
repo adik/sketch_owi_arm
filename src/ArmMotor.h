@@ -10,11 +10,27 @@
 
 #include <AFMotor.h>
 
+struct ArmMotorParams {
+	uint8_t		motornum;
+	uint8_t 	sensor_pin;
+	uint16_t	min_range;
+	uint16_t	max_range;
+};
+
+struct ArmMotorStatus {
+	uint16_t	curentPos;
+	uint16_t 	targetPos;
+	uint16_t	distance;
+
+	uint8_t		direction;
+};
+
+
 
 class ArmMotor : public AF_DCMotor
 {
  public:
-	ArmMotor(uint8_t mnum, uint8_t pin, uint8_t freq = MOTOR12_1KHZ);
+	ArmMotor(const ArmMotorParams *, ArmMotorStatus *, uint8_t freq = MOTOR12_1KHZ);
 
 	void moveTo(uint16_t);
 	void move(uint8_t);
@@ -26,15 +42,10 @@ class ArmMotor : public AF_DCMotor
 	void calculateSpeed();
 
  private:
-	uint8_t 	_sensor_pin;
-	uint8_t 	_mnum;
+	void _run(uint8_t);
 
-	//
-	uint16_t 	_currentPosition;
-	uint16_t 	_targetPosition;
-	uint16_t 	_distance;
-	boolean 	_stoped;
-
+	const ArmMotorParams *Params;
+	ArmMotorStatus *Status;
 };
 
 

@@ -14,82 +14,95 @@
 #include <ArmMotor.h>
 #include <AFMotor.h>
 
-#define STOP_RANGE 10
+#define NOISE_DIFF	10 	//
+#define NOISE_ITER	4 	//
+#define SENSITIVITY 2	//
 
 // Constructor
-ArmMotor::ArmMotor(uint8_t mnum, uint8_t pin, uint8_t freq) : AF_DCMotor(mnum, freq)
+ArmMotor::ArmMotor(const ArmMotorParams *params, ArmMotorStatus *status,  uint8_t freq) : AF_DCMotor(params->motornum, freq)
 {
+	Params = params;
+	Status = status;
+
 	// set sensor pin
-	_sensor_pin = pin;
-	pinMode(_sensor_pin, INPUT);
+	pinMode(Params->sensor_pin, INPUT);
 
-	//
-	_currentPosition = 0;
-	_targetPosition = 0;
-	_stoped = true;
+	// set default
+	Status->curentPos = Params->min_range;
+	Status->targetPos = Params->min_range;
+	Status->direction = RELEASE;
+}
 
-	_mnum = mnum;
-
-	// stop motor
-	//AF_DCMotor::setSpeed(100);
-	//AF_DCMotor::run(FORWARD);
-
+void ArmMotor::_run(uint8_t direction)
+{
+	if ( Status->direction != direction )
+	{
+		AF_DCMotor::setSpeed(150);
+		AF_DCMotor::run(direction);
+		Status->direction = direction;
+	}
 }
 
 void ArmMotor::go()
 {
-	static uint8_t _chkupd = 0;
+	static uint16_t old_pos    = 0;
+	static uint8_t  noise_iter = 0;
 
-	if (_stoped)
+	// Skip if motor is not running
+	if ( Status->direction == RELEASE )
 		goto skip_check;
 
-	_currentPosition = analogRead(_sensor_pin);
+	// Getting the current position
+	Status->curentPos = analogRead(Params->sensor_pin);
 
-	if ( _chkupd == _currentPosition)
+	// Error
+	if ( noise_iter >= NOISE_ITER ) {
+		_run(RELEASE);
+		noise_iter = 0;
 		goto skip_check;
-
-//
-	_distance = abs(_targetPosition - _currentPosition);
-
-	AF_DCMotor::setSpeed( 150 );
-
-	if ( _distance < STOP_RANGE ) {
-		AF_DCMotor::run(RELEASE);
-		_stoped = true;
 	}
-	else if (_currentPosition < _targetPosition ) {
-		AF_DCMotor::run(FORWARD);
+
+	// Skip noise
+	if ( abs(old_pos - Status->curentPos) >= NOISE_DIFF ) {
+		++noise_iter;
+		goto skip_check;
 	}
-	else if (_currentPosition > _targetPosition ) {
-		AF_DCMotor::run(BACKWARD);
+
+	// Calculate
+	Status->distance = abs(Status->targetPos - Status->curentPos);
+
+	if ( Status->distance < SENSITIVITY ) {
+		_run(RELEASE);
+	}
+	else if ( Status->curentPos < Status->targetPos ) {
+		_run(FORWARD);
+	}
+	else if (Status->curentPos > Status->targetPos ) {
+		_run(BACKWARD);
 	};
 
+	old_pos = Status->curentPos;
+
 skip_check:
-	_chkupd = _currentPosition;
+	return;
 }
 
 void ArmMotor::stop() {
-	_stoped = true;
-	_targetPosition = _currentPosition;
-
-	AF_DCMotor::run(RELEASE);
+	_run(RELEASE);
+	Status->targetPos = Status->curentPos;
 }
 
 void ArmMotor::moveTo(uint16_t position) {
-	_stoped = false;
-	_targetPosition = position;
+	Status->targetPos = position;
 }
 
 void ArmMotor::move(uint8_t direction) {
-	_stoped = false;
-
-	//AF_DCMotor::run(direction);
 	switch (direction) {
 	case FORWARD:
-		_targetPosition = 1000;
+		Status->targetPos = Params->max_range;
 		break;
 	case BACKWARD:
-		_targetPosition = 10;
+		Status->targetPos = Params->min_range;
 		break;
 	}
 }

@@ -10,16 +10,23 @@
 #define CMD_MOVETO	0x01
 #define CMD_MOVE	0x02
 #define CMD_STOP	0x03
-
+#define CMD_INFO	0x04
 
 
 static uint8_t incomingByte;
 static uint8_t i, m, j;
 
-const uint8_t MOTOR_COUNT=4;
-const uint8_t motor_sensor[MOTOR_COUNT] = {A0, A1, A2, A3};
 
-ArmMotor * motor[MOTOR_COUNT];
+const uint8_t MOTOR_COUNT=4;
+static ArmMotor *Motor[MOTOR_COUNT];
+static ArmMotorStatus MotorStatus[MOTOR_COUNT] = {};
+const  ArmMotorParams MotorParams[MOTOR_COUNT] = {
+	{1, A0, 10, 1000},
+	{2, A1, 10, 1000},
+	{3, A2, 10, 1000},
+	{4, A3, 10, 1000},
+};
+
 
 
 // TODO
@@ -50,7 +57,7 @@ inline void processSerial()
 			motornum = nextByte();
 			position = (nextByte()<<8) | nextByte();
 			if ( motornum>=0 && motornum<MOTOR_COUNT ) {
-				motor[motornum]->moveTo(position);
+				Motor[motornum]->moveTo(position);
 				Serial.write(0x11);
 			}
 			break;
@@ -58,14 +65,14 @@ inline void processSerial()
 			motornum = nextByte();
 			direction = nextByte();
 			if ( motornum>=0 && motornum<MOTOR_COUNT ) {
-				motor[motornum]->move(direction);
+				Motor[motornum]->move(direction);
 				Serial.write(0x12);
 			}
 			break;
 		case CMD_STOP:
 			motornum = nextByte();
 			if ( motornum>=0 && motornum<MOTOR_COUNT ) {
-				motor[motornum]->stop();
+				Motor[motornum]->stop();
 				Serial.write(0x13);
 			}
 			break;
@@ -82,11 +89,11 @@ inline void setup()
 	Serial.println("ARM control v000");
 
 	for (i=0; i<MOTOR_COUNT; ++i) {
-		motor[i] = new ArmMotor(i+1, motor_sensor[i]);
+		Motor[i] = new ArmMotor(&MotorParams[i], &MotorStatus[i]);
 	}
 
-	motor[0]->moveTo(500);
-	motor[1]->moveTo(500);
+	Motor[0]->moveTo(500);
+	Motor[1]->moveTo(500);
 }
 
 
@@ -97,7 +104,7 @@ inline void loop()
 
 	// calculate speed, detect motor position
 	for (i=0; i<MOTOR_COUNT; ++i) {
-		motor[i]->go();
+		Motor[i]->go();
 	}
 	delay(200);
 }

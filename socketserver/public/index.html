@@ -1,85 +1,185 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
-
-  
 <head>
   	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js" type="text/javascript"></script>
+  	<script src="kinetic-v3.9.3.min.js" type="text/javascript"></script>
+  	<script src="kinematic.js" type="text/javascript"></script>
+  	<script src="draw.js" type="text/javascript"></script>
+  	<script src="connection.js" type="text/javascript"></script>
+  	<link rel="stylesheet" href="style.css" type="text/css" media="screen, projection" />
 </head>
-  
 <body>
   
 <script type="text/javascript">
-var socket;
-var holded = false;
 
-$(document).ready(function() {
+/*
+  http://simeonvisser.hubpages.com/hub/HTML5-Tutorial-Drawing-Circles-and-Arcs
+  http://www.html5canvastutorials.com/kineticjs/html5-canvas-path-mouseover/
+  http://stackoverflow.com/questions/6175176/need-to-create-mutiple-circle-in-a-canvas-like-a-paint-application
+*/
 
-  socket = new WebSocket('ws://127.0.0.1:8080');
-  socket.onmessage = function(mess) {
-    $('#debug').text(mess.data);
-  };
-  
-  
-  
-  $("input[type=button]").bind ({
-  	mousedown : function(e) {
-    	down($(this));
-  	},
-  	mouseup : function(e) {
-    	if (holded) up($(this));
-  	},
-  	mouseleave : function(e) {
-    	if (holded) up($(this));
-  	}
-  });
 
-});
+$(document).ready(function() 
+{
+	var box = $("#drawBox")
+	var area = $("#moveArea")
+	
+	var offset = box.offset()
+	
+	var radius=250;
+	var center_x=510/2
+	var center_y=510/2
 
-function down(o) {
-    $("#debug2").text("down")
-	socket.send('down ' + o.attr('name'))
-	holded = true;
+	initSocket();
+	
+	/*
+	radarObj = new ArmRadar({
+					container: "canvasContainer",
+					width: 510,
+					height: 300
+				});
+	*/
+				
+				
+	// refactor:
+	area.css({
+		top: center_y - radius,
+		left: center_x - radius,
+		
+		width:radius*2,
+		height:radius*2,
+		
+		'border-radius':radius,
+		'-moz-border-radius':radius,
+	    '-webkit-border-radius':radius
+	})
+	
+	area.mousemove(function(e){
+		var x = (e.pageX-offset.left-radius)
+		var y = -(e.pageY-offset.top-radius)
+		$("#debug3").text("x:"+x+"y:"+ y);
+	})
+	
+	area.click(function(e){
+		 calculate((e.pageX-offset.left-radius),-(e.pageY-offset.top-radius), 100, 0);
+	})
+	
+	$("input[name=BASE_HGT]").val(BASE_HGT)
+	$("input[name=HUMERUS]").val(HUMERUS)
+	$("input[name=ULNA]").val(ULNA)
+	$("input[name=GRIPPER]").val(GRIPPER)
+	
+	$("#setcoordButton").bind("click", function(){set_coord(coords)});
+		
+	
+})
+
+function calculate(x,y,z,a)
+{
+	var angles = calculate_angles(x,y,z,a);
+	var coords = calculate_coords(angles);
+
+	set_coord(coords)
+	coord()
+	
+	$("input[name=bas_angle_d]").val(angles[0])
+	$("input[name=shl_angle_d]").val(angles[1])
+	$("input[name=elb_angle_dn]").val(angles[2])
+	$("input[name=wri_angle_d]").val(angles[3])
 }
-
-function up(o) {
-	$("#debug2").text("down")
-	socket.send('up ' + o.attr('name'))
-	holded = false;
-}
-
 </script>
   
   
-  <div> 
-    <b>Motor 1 : </b>
-    <input type="button" name="left 1"  value=" &lt;&lt;&lt; " > <input type="button" name="right 1" value=" &gt;&gt;&gt; " >
-  </div>
   
-  <div> 
-    <b>Motor 2 : </b>
-    <input type="button" name="left 2"  value=" &lt;&lt;&lt; " > <input type="button" name="right 2" value=" &gt;&gt;&gt; " >
-  </div>
+<div id="wrapper">
+	<div id="header">
+	</div><!-- #header-->
+	<div id="middle">
+		<div id="container">
+			<div id="content">
+			
+				<div id="canvasContainer"> </div>
+				<div id="drawBox" style="width:510px;height:510px;position:relative;background: #adadad;">
+					<div id="moveArea" style="border:1px #FF00FF solid;position:absolute;"></div>
+				</div>
+				
+			</div><!-- #content-->
+		</div><!-- #container-->
+
+		<div class="sidebar" id="sideRight">
+
+			<style>
+			#control1 input{text-align:center;}
+			</style>
+			<div style="padding:20px">
+			
+				<h2>Control panel</h2>
+				<div id="control1">
+				  <div> 
+				    <b>Motor 1 : </b>
+				    <input type="button" name="left 1"  value=" &lt;&lt;&lt; " > 
+				    <input type="Text" readonly="true" size="4"> 
+				    <input type="button" name="right 1" value=" &gt;&gt;&gt; " >
+				  </div>
+				  <div> 
+				    <b>Motor 2 : </b>
+				    <input type="button" name="left 2"  value=" &lt;&lt;&lt; " >
+				    <input type="Text" readonly="true" size="4">
+				    <input type="button" name="right 2" value=" &gt;&gt;&gt; " >
+				  </div>
+				  <div> 
+				    <b>Motor 3 : </b>
+				    <input type="button" name="left 3"  value=" &lt;&lt;&lt; " >
+				    <input type="Text" readonly="true" size="4">
+				    <input type="button" name="right 3" value=" &gt;&gt;&gt; " >
+				  </div>
+				  <div> 
+				    <b>Motor 4 : </b>
+				    <input type="button" name="left 4"  value=" &lt;&lt;&lt; " >
+				    <input type="Text" readonly="true" size="4">
+				    <input type="button" name="right 4" value=" &gt;&gt;&gt; " >
+				  </div>
+				</div>
+				<div>
+				  <input type="Text" size="5" id="mot0" value="250"> 
+				  <input type="Text" size="5" id="mot1" value="500">
+				  <input type="Text" size="5" id="mot2" value="650">
+				  <input type="Text" size="5" id="mot3" value="400">
+				  <input type="Button" id="setpos" value="submit">
+				</div>
+				
+				<h2>Inverse Kinematic</h2>
+				<div>
+				BASE_HGT: <input type="Text" name="BASE_HGT" size="5"><br/>
+				HUMERUS: <input type="Text" name="HUMERUS" size="5"><br/>
+				ULNA: <input type="Text" name="ULNA" size="5"><br/>
+				GRIPPER: <input type="Text" name="GRIPPER" size="5"><br/>
+				<br/>
+				base: <input type="Text" name="bas_angle_d" size="5">
+				shoulder: <input type="Text" name="shl_angle_d" size="5">
+				elbow: <input type="Text" name="elb_angle_dn" size="5">
+				wrist: <input type="Text" name="wri_angle_d" size="5">
+				
+				<br/>
+				<input type="Button" id="setcoordButton" value="set_coord">
+				
+				</div>
+				
+				<div id="debug"></div>
+				<div id="debug2"></div>
+				<div id="debug3"></div>
+			</div>
+				  
+			
+		</div><!-- .sidebar#sideRight -->
+	</div><!-- #middle-->
+	<div id="footer">
+		
+	</div><!-- #footer -->
+</div><!-- #wrapper -->
   
-  <div> 
-    <b>Motor 3 : </b>
-    <input type="button" name="left 3"  value=" &lt;&lt;&lt; " > <input type="button" name="right 3" value=" &gt;&gt;&gt; " >
-  </div>
+
   
-  <div> 
-    <b>Motor 4 : </b>
-    <input type="button" name="left 4"  value=" &lt;&lt;&lt; " > <input type="button" name="right 4" value=" &gt;&gt;&gt; " >
-  </div>
-  
-  <div> 
-    <b>Motor 5 : </b>
-    <input type="button" name="left 5"  value=" &lt;&lt;&lt; " > <input type="button" name="right 5" value=" &gt;&gt;&gt; " >
-  </div>
-  
-  <div id="debug"></div>
-  <div id="debug2"></div>
-  <form>
-  <input type="submit">
-  </form>
   
   </body>
 </html>

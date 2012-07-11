@@ -1,8 +1,9 @@
 var socket;
 var holded = false;
 
-function initSocket() {
-  socket = new WebSocket('ws://127.0.0.1:8080');
+function initSocket() 
+{
+  socket = new WebSocket('ws://'+(location.hostname)+':8080');
   socket.onmessage = function(mess) {
     $('#debug').text(mess.data);
   };

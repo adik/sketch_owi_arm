@@ -1,14 +1,18 @@
 /*
  * kinematic.cpp
  *
-// http://www.circuitsathome.com/mcu/programming/robotic-arm-inverse-kinematics-on-arduino
-//              ULMA    GRIPP..
-//             +-------+------E
-//     HUMERUS |
-//             |
-//            =0=
-//     BASE    |
-//     _______===_______
+ * Links :
+ * http://www.societyofrobots.com/robot_arm_tutorial.shtml
+ * http://www.circuitsathome.com/mcu/programming/robotic-arm-inverse-kinematics-on-arduino
+ *
+ *
+ *              ULMA    GRIPP..
+ *             +-------+------E
+ *     HUMERUS |
+ *             |
+ *            =0=
+ *     BASE    |
+ *     _______===_______
  */
 
 #include <Arduino.h>
@@ -62,7 +66,6 @@ void set_arm( float x, float y, float z, float grip_angle_d)
   /* wrist angle */
   float wri_angle_d = ( grip_angle_d - elb_angle_dn ) - shl_angle_d;
 
-
   /*
   int16_t bas_pos = MotorParams[0].startPosition + degrees(bas_angle_r) * pot_ratio;
   int16_t shl_pos = MotorParams[1].startPosition + (MotorParams[1].startAngle - shl_angle_d ) * pot_ratio;
@@ -78,43 +81,3 @@ void set_arm( float x, float y, float z, float grip_angle_d)
   */
 }
 
-
-/*
-case CMD_POSITION:
-	double coord_x, coord_y, coord_z, grip_angle;
-
-	coord_x = get_next_byte();
-	coord_y = get_next_byte();
-	coord_z = get_next_byte();
-	grip_angle = get_next_byte();
-
-	set_arm(coord_x, coord_y, coord_z, grip_angle);
-
-	Serial.print(" x, y, z, a = ");
-	Serial.print(coord_x); Serial.print(coord_y);
-	Serial.print(coord_z); Serial.print(grip_angle);
-	Serial.println();
-
-
-	break;
-*/
-
-
-/*
-inline void setup()
-{
-	Serial.begin(115200);
-	Serial.println("ARM debug");
-}
-
-inline void loop()
-{
-
-	Serial.print("A0="); Serial.println(analogRead(A0));
-	Serial.print("A1="); Serial.println(analogRead(A1));
-	Serial.print("A2="); Serial.println(analogRead(A2));
-	Serial.print("A3="); Serial.println(analogRead(A3));
-
-	delay(100);
-}
-*/

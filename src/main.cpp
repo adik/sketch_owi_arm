@@ -1,27 +1,31 @@
 /*
+ * main.cpp
+ *
  * Target: AVR328P
- *
- *
- *
- * Links :
- * http://www.societyofrobots.com/robot_arm_tutorial.shtml
+ * Author: smirnov.arkady@gmail.com
  *
  */
+
+/*
+ * use PWM from timer2A on PB3 (Arduino pin #11)
+ * use PWM from timer2B (pin 3)
+ * use PWM from timer0A / PD6 (pin 6)
+ * use PWM from timer0B / PD5 (pin 5)
+*/
+
 #include <main.h>
 #include <Arduino.h>
 #include <ArmMotor.h>
 
-
-
-const uint8_t MOTOR_COUNT=4;
+const uint8_t MOTOR_COUNT = 4;
 
 static ArmMotor 		*Motor[MOTOR_COUNT];
 static ArmMotorStatus 	MotorStatus[MOTOR_COUNT] = {};
 const  ArmMotorParams	MotorParams[MOTOR_COUNT] = {
-	{4, A3, 30,  1000,  530, 0},
-	{3, A2, 450, 1000, 	700, 90},
-	{2, A1, 10,  700,  	530, -90},
-	{1, A0, 235, 720,  	480, 0},
+	{4, A3, 30,  1000,  530, 0},   //base
+	{3, A2, 450, 1000, 	700, 90},  //shoulder
+	{2, A1, 10,  700,  	530, -90}, //elbow
+	{1, A0, 235, 720,  	480, 0},   //wrist
 };
 
 
@@ -33,16 +37,20 @@ uint8_t recv_byte = 0;
 uint8_t cmd_buffer[13];
 
 /*
- *
+ * switch algorithm for serial commands
  */
-inline void process_serial(uint8_t *buffer)
+//
+#define SERIAL_WAIT_CMD 0
+#define SERIAL_GET_CMD 1
+
+inline void serial_get_cmd(uint8_t *buffer)
 {
 	incomingByte = Serial.read();
 	switch (serial_step) {
 	case SERIAL_GET_CMD:
 		buffer[recv_byte] = incomingByte;
 		recv_byte++;
-		if ( process_cmd(&recv_byte, buffer ) )
+		if ( serial_process_cmd(&recv_byte, buffer ) )
 		{
 			serial_step = SERIAL_WAIT_CMD;
 		}
@@ -58,11 +66,7 @@ inline void process_serial(uint8_t *buffer)
 	}
 }
 
-
-/*
- *
- */
-inline int8_t process_cmd(const uint8_t *recv_byte, uint8_t *buffer )
+inline int8_t serial_process_cmd(const uint8_t *recv_byte, uint8_t *buffer )
 {
 	switch (buffer[0])
 	{
@@ -127,37 +131,36 @@ inline int8_t process_cmd(const uint8_t *recv_byte, uint8_t *buffer )
 }
 
 
-/*
- *
- *
- */
+
 inline void setup()
 {
+	/* Init serial connection	 */
 	Serial.begin(115200);
 	Serial.println("ARM control v000");
 
+	/* Setup motors */
 	for (i=0; i<MOTOR_COUNT; ++i) {
 		Motor[i] = new ArmMotor(&MotorParams[i], &MotorStatus[i]);
 		Motor[i]->park();
 	}
-}
 
+	/* Setup grip */
+
+}
 
 inline void loop()
 {
 	// process serial commands
-	if (Serial.available()) process_serial(cmd_buffer);
+	if (Serial.available()) serial_get_cmd(cmd_buffer);
 
-	// V1
+	// process parallel run
 	for (i=0, r=0; i<MOTOR_COUNT; ++i)
 		if (!MotorStatus[i].completed)
 		{
 			Motor[i]->go();
 
-			if (++r == PARALEL_RUN) break;
+			if (++r == MAX_PARALLEL_RUN) break;
 		}
-
-//	delay(50);
 }
 
 ////////// ---------------------------------- ////////

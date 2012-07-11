@@ -1,8 +1,8 @@
 /*
  * kinematic.h
  *
- *  Created on: 22 апр. 2012
- *      Author: adik
+ * Author: smirnov.arkady@gmail.com
+ *
  */
 
 #ifndef KINEMATIC_H_

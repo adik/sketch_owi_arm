@@ -2,13 +2,12 @@
 
 var ArmRadar = function (config) 
 {
-	
 	this.canvasStage = new Kinetic.Stage(config);
 	this.mainLayer = new Kinetic.Layer();
 	this.messageLayer = new Kinetic.Layer();
 		
 	var circle = new Kinetic.Circle({
-		x: this.canvasStage.getWidth() / 2,
+		x: this.canvasStage.getWidth()/2,
 		y: this.canvasStage.getHeight(),
 		radius: 250,
 		fill: "red",
@@ -24,16 +23,13 @@ var ArmRadar = function (config)
 	this.canvasStage.add(this.messageLayer);
 }
 
-
 ArmRadar.prototype = {
 }
-
 
 
 var canvasStage = {}
 var mainLayer = {}
 var messageLayer = {} 
-
 
 function writeMessage(messageLayer, message) 
 {

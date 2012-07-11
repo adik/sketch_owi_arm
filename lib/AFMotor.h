@@ -84,20 +84,7 @@ class AF_DCMotor
   uint8_t motornum, pwmfreq;
 };
 
-class AF_Stepper {
- public:
-  AF_Stepper(uint16_t, uint8_t);
-  void step(uint16_t steps, uint8_t dir,  uint8_t style = SINGLE);
-  void setSpeed(uint16_t);
-  uint8_t onestep(uint8_t dir, uint8_t style);
-  void release(void);
-  uint16_t revsteps; // # steps per revolution
-  uint8_t steppernum;
-  uint32_t usperstep, steppingcounter;
- private:
-  uint8_t currentstep;
 
-};
 
 uint8_t getlatchstate(void);
 

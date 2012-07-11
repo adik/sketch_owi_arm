@@ -15,11 +15,6 @@
 
 static uint8_t latch_state;
 
-#if (MICROSTEPS == 8)
-uint8_t microstepcurve[] = {0, 50, 98, 142, 180, 212, 236, 250, 255};
-#elif (MICROSTEPS == 16)
-uint8_t microstepcurve[] = {0, 25, 50, 74, 98, 120, 141, 162, 180, 197, 212, 225, 236, 244, 250, 253, 255};
-#endif
 
 AFMotorController::AFMotorController(void) {
 }
@@ -116,6 +111,7 @@ inline void setPWM1(uint8_t s) {
 #endif
 }
 
+
 inline void initPWM2(uint8_t freq) {
 #if defined(__AVR_ATmega8__) || \
     defined(__AVR_ATmega48__) || \
@@ -144,7 +140,7 @@ inline void setPWM2(uint8_t s) {
     defined(__AVR_ATmega88__) || \
     defined(__AVR_ATmega168__) || \
     defined(__AVR_ATmega328P__)
-    // use PWM from timer2A on PB3 (Arduino pin #11)
+    // use PWM from timer2B (pin 3)
     OCR2B = s;
 #elif defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
     // on arduino mega, pin 11 is now PB5 (OC1A)
@@ -192,8 +188,6 @@ inline void setPWM3(uint8_t s) {
 #endif
 }
 
-
-
 inline void initPWM4(uint8_t freq) {
 #if defined(__AVR_ATmega8__) || \
     defined(__AVR_ATmega48__) || \
@@ -222,7 +216,7 @@ inline void setPWM4(uint8_t s) {
     defined(__AVR_ATmega88__) || \
     defined(__AVR_ATmega168__) || \
     defined(__AVR_ATmega328P__)
-    // use PWM from timer0A on PB3 (Arduino pin #6)
+    // use PWM from timer0B / PD5 (pin 5)
     OCR0B = s;
 #elif defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
     // on arduino mega, pin 6 is now PH3 (OC4A)
@@ -231,6 +225,7 @@ inline void setPWM4(uint8_t s) {
    #error "This chip is not supported!"
 #endif
 }
+
 
 AF_DCMotor::AF_DCMotor(uint8_t num, uint8_t freq) {
   motornum = num;
@@ -247,16 +242,19 @@ AF_DCMotor::AF_DCMotor(uint8_t num, uint8_t freq) {
   case 2:
     latch_state &= ~_BV(MOTOR2_A) & ~_BV(MOTOR2_B); // set both motor pins to 0
     MC.latch_tx();
+    //initPWM1(freq);
     initPWM2(freq);
     break;
   case 3:
     latch_state &= ~_BV(MOTOR3_A) & ~_BV(MOTOR3_B); // set both motor pins to 0
     MC.latch_tx();
+    //initPWM1(freq);
     initPWM3(freq);
     break;
   case 4:
     latch_state &= ~_BV(MOTOR4_A) & ~_BV(MOTOR4_B); // set both motor pins to 0
     MC.latch_tx();
+    //initPWM1(freq);
     initPWM4(freq);
     break;
   }
@@ -301,264 +299,14 @@ void AF_DCMotor::setSpeed(uint8_t speed) {
   case 1:
     setPWM1(speed); break;
   case 2:
+	//setPWM1(speed); break;
     setPWM2(speed); break;
   case 3:
+	//setPWM1(speed); break;
     setPWM3(speed); break;
   case 4:
+	//setPWM1(speed); break;
     setPWM4(speed); break;
   }
-}
-
-/******************************************
-               STEPPERS
-******************************************/
-
-AF_Stepper::AF_Stepper(uint16_t steps, uint8_t num) {
-  MC.enable();
-
-  revsteps = steps;
-  steppernum = num;
-  currentstep = 0;
-
-  if (steppernum == 1) {
-    latch_state &= ~_BV(MOTOR1_A) & ~_BV(MOTOR1_B) &
-      ~_BV(MOTOR2_A) & ~_BV(MOTOR2_B); // all motor pins to 0
-    MC.latch_tx();
-    
-    // enable both H bridges
-    pinMode(11, OUTPUT);
-    pinMode(3, OUTPUT);
-    digitalWrite(11, HIGH);
-    digitalWrite(3, HIGH);
-
-    // use PWM for microstepping support
-    initPWM1(MOTOR12_64KHZ);
-    initPWM2(MOTOR12_64KHZ);
-    setPWM1(255);
-    setPWM2(255);
-
-  } else if (steppernum == 2) {
-    latch_state &= ~_BV(MOTOR3_A) & ~_BV(MOTOR3_B) &
-      ~_BV(MOTOR4_A) & ~_BV(MOTOR4_B); // all motor pins to 0
-    MC.latch_tx();
-
-    // enable both H bridges
-    pinMode(5, OUTPUT);
-    pinMode(6, OUTPUT);
-    digitalWrite(5, HIGH);
-    digitalWrite(6, HIGH);
-
-    // use PWM for microstepping support
-    // use PWM for microstepping support
-    initPWM3(1);
-    initPWM4(1);
-    setPWM3(255);
-    setPWM4(255);
-  }
-}
-
-void AF_Stepper::setSpeed(uint16_t rpm) {
-  usperstep = 60000000 / ((uint32_t)revsteps * (uint32_t)rpm);
-  steppingcounter = 0;
-}
-
-void AF_Stepper::release(void) {
-  if (steppernum == 1) {
-    latch_state &= ~_BV(MOTOR1_A) & ~_BV(MOTOR1_B) &
-      ~_BV(MOTOR2_A) & ~_BV(MOTOR2_B); // all motor pins to 0
-    MC.latch_tx();
-  } else if (steppernum == 2) {
-    latch_state &= ~_BV(MOTOR3_A) & ~_BV(MOTOR3_B) &
-      ~_BV(MOTOR4_A) & ~_BV(MOTOR4_B); // all motor pins to 0
-    MC.latch_tx();
-  }
-}
-
-void AF_Stepper::step(uint16_t steps, uint8_t dir,  uint8_t style) {
-  uint32_t uspers = usperstep;
-  uint8_t ret = 0;
-
-  if (style == INTERLEAVE) {
-    uspers /= 2;
-  }
- else if (style == MICROSTEP) {
-    uspers /= MICROSTEPS;
-    steps *= MICROSTEPS;
-#ifdef MOTORDEBUG
-    Serial.print("steps = "); Serial.println(steps, DEC);
-#endif
-  }
-
-  while (steps--) {
-    ret = onestep(dir, style);
-    delay(uspers/1000); // in ms
-    steppingcounter += (uspers % 1000);
-    if (steppingcounter >= 1000) {
-      delay(1);
-      steppingcounter -= 1000;
-    }
-  }
-  if (style == MICROSTEP) {
-    while ((ret != 0) && (ret != MICROSTEPS)) {
-      ret = onestep(dir, style);
-      delay(uspers/1000); // in ms
-      steppingcounter += (uspers % 1000);
-      if (steppingcounter >= 1000) {
-	delay(1);
-	steppingcounter -= 1000;
-      } 
-    }
-  }
-}
-
-uint8_t AF_Stepper::onestep(uint8_t dir, uint8_t style) {
-  uint8_t a, b, c, d;
-  uint8_t ocrb, ocra;
-
-  ocra = ocrb = 255;
-
-  if (steppernum == 1) {
-    a = _BV(MOTOR1_A);
-    b = _BV(MOTOR2_A);
-    c = _BV(MOTOR1_B);
-    d = _BV(MOTOR2_B);
-  } else if (steppernum == 2) {
-    a = _BV(MOTOR3_A);
-    b = _BV(MOTOR4_A);
-    c = _BV(MOTOR3_B);
-    d = _BV(MOTOR4_B);
-  } else {
-    return 0;
-  }
-
-  // next determine what sort of stepping procedure we're up to
-  if (style == SINGLE) {
-    if ((currentstep/(MICROSTEPS/2)) % 2) { // we're at an odd step, weird
-      if (dir == FORWARD) {
-	currentstep += MICROSTEPS/2;
-      }
-      else {
-	currentstep -= MICROSTEPS/2;
-      }
-    } else {           // go to the next even step
-      if (dir == FORWARD) {
-	currentstep += MICROSTEPS;
-      }
-      else {
-	currentstep -= MICROSTEPS;
-      }
-    }
-  } else if (style == DOUBLE) {
-    if (! (currentstep/(MICROSTEPS/2) % 2)) { // we're at an even step, weird
-      if (dir == FORWARD) {
-	currentstep += MICROSTEPS/2;
-      } else {
-	currentstep -= MICROSTEPS/2;
-      }
-    } else {           // go to the next odd step
-      if (dir == FORWARD) {
-	currentstep += MICROSTEPS;
-      } else {
-	currentstep -= MICROSTEPS;
-      }
-    }
-  } else if (style == INTERLEAVE) {
-    if (dir == FORWARD) {
-       currentstep += MICROSTEPS/2;
-    } else {
-       currentstep -= MICROSTEPS/2;
-    }
-  } 
-
-  if (style == MICROSTEP) {
-    if (dir == FORWARD) {
-      currentstep++;
-    } else {
-      // BACKWARDS
-      currentstep--;
-    }
-
-    currentstep += MICROSTEPS*4;
-    currentstep %= MICROSTEPS*4;
-
-    ocra = ocrb = 0;
-    if ( (currentstep >= 0) && (currentstep < MICROSTEPS)) {
-      ocra = microstepcurve[MICROSTEPS - currentstep];
-      ocrb = microstepcurve[currentstep];
-    } else if  ( (currentstep >= MICROSTEPS) && (currentstep < MICROSTEPS*2)) {
-      ocra = microstepcurve[currentstep - MICROSTEPS];
-      ocrb = microstepcurve[MICROSTEPS*2 - currentstep];
-    } else if  ( (currentstep >= MICROSTEPS*2) && (currentstep < MICROSTEPS*3)) {
-      ocra = microstepcurve[MICROSTEPS*3 - currentstep];
-      ocrb = microstepcurve[currentstep - MICROSTEPS*2];
-    } else if  ( (currentstep >= MICROSTEPS*3) && (currentstep < MICROSTEPS*4)) {
-      ocra = microstepcurve[currentstep - MICROSTEPS*3];
-      ocrb = microstepcurve[MICROSTEPS*4 - currentstep];
-    }
-  }
-
-  currentstep += MICROSTEPS*4;
-  currentstep %= MICROSTEPS*4;
-
-#ifdef MOTORDEBUG
-  Serial.print("current step: "); Serial.println(currentstep, DEC);
-  Serial.print(" pwmA = "); Serial.print(ocra, DEC); 
-  Serial.print(" pwmB = "); Serial.println(ocrb, DEC); 
-#endif
-
-  if (steppernum == 1) {
-    setPWM1(ocra);
-    setPWM2(ocrb);
-  } else if (steppernum == 2) {
-    setPWM3(ocra);
-    setPWM4(ocrb);
-  }
-
-
-  // release all
-  latch_state &= ~a & ~b & ~c & ~d; // all motor pins to 0
-
-  //Serial.println(step, DEC);
-  if (style == MICROSTEP) {
-    if ((currentstep >= 0) && (currentstep < MICROSTEPS))
-      latch_state |= a | b;
-    if ((currentstep >= MICROSTEPS) && (currentstep < MICROSTEPS*2))
-      latch_state |= b | c;
-    if ((currentstep >= MICROSTEPS*2) && (currentstep < MICROSTEPS*3))
-      latch_state |= c | d;
-    if ((currentstep >= MICROSTEPS*3) && (currentstep < MICROSTEPS*4))
-      latch_state |= d | a;
-  } else {
-    switch (currentstep/(MICROSTEPS/2)) {
-    case 0:
-      latch_state |= a; // energize coil 1 only
-      break;
-    case 1:
-      latch_state |= a | b; // energize coil 1+2
-      break;
-    case 2:
-      latch_state |= b; // energize coil 2 only
-      break;
-    case 3:
-      latch_state |= b | c; // energize coil 2+3
-      break;
-    case 4:
-      latch_state |= c; // energize coil 3 only
-      break; 
-    case 5:
-      latch_state |= c | d; // energize coil 3+4
-      break;
-    case 6:
-      latch_state |= d; // energize coil 4 only
-      break;
-    case 7:
-      latch_state |= d | a; // energize coil 1+4
-      break;
-    }
-  }
-
- 
-  MC.latch_tx();
-  return currentstep;
 }
 

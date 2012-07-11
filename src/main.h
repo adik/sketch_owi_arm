@@ -1,8 +1,8 @@
 /*
  * main.h
  *
- *  Created on: 22 апр. 2012
- *      Author: adik
+ * Author: smirnov.arkady@gmail.com
+ *
  */
 
 #ifndef MAIN_H_
@@ -17,15 +17,10 @@
 #define CMD_INFO		0x04
 #define CMD_POSITION	0x05
 
-//
-#define PARALEL_RUN 2
+// The maximum number of parallel running motors
+#define MAX_PARALLEL_RUN 2
 
-//
-#define SERIAL_WAIT_CMD 0
-#define SERIAL_GET_CMD 1
-
-
-int8_t process_cmd(const uint8_t *, uint8_t * );
+int8_t serial_process_cmd(const uint8_t *, uint8_t *);
 
 
 #endif /* MAIN_H_ */

@@ -1,9 +1,10 @@
 /*
  * ArmMotor.cpp
  *
- *  Created on: 7 апр. 2012
- *      Author: adik
+ * Author: smirnov.arkady@gmail.com
+ *
  */
+
 #if (ARDUINO >= 100)
  #include "Arduino.h"
 #else
@@ -13,10 +14,13 @@
 
 #include <ArmMotor.h>
 #include <AFMotor.h>
+#include "wiring_private.h"
 
-#define SPEED 200
+#define DEFAULT_MOTOR_SPEED 150
+#define DEFAULT_GRIP_SPEED  40
 
 // Constructor
+//
 ArmMotor::ArmMotor(const ArmMotorParams *params, ArmMotorStatus *status,  uint8_t freq) : AF_DCMotor(params->motornum, freq)
 {
 	Params = params;
@@ -47,7 +51,7 @@ void ArmMotor::check()
 
 	//FIXIT:
 	Status->direction = BRAKE;
-	AF_DCMotor::setSpeed(SPEED);
+	AF_DCMotor::setSpeed(DEFAULT_MOTOR_SPEED);
 
 	// check rotation rules
 	for (int i=0; i<6; ++i)
@@ -83,7 +87,6 @@ void ArmMotor::park()
  */
 void ArmMotor::go()
 {
-
 	// Skip if brake was released
 	if ( Status->direction == BRAKE )
 		goto skip_check;
@@ -128,17 +131,21 @@ void ArmMotor::go()
 	{
 		_run(FORWARD);
 
+		/*
 		Serial.print(Params->motornum);
 		Serial.print(" F: CurrentPos=");
 		Serial.println(Status->curentPos);
+		*/
 	}
 	else if (Status->curentPos > Status->targetPos)
 	{
 		_run(BACKWARD);
 
+		/*
 		Serial.print(Params->motornum);
 		Serial.print(" B: CurrentPos=");
 		Serial.println(Status->curentPos);
+		*/
 	};
 
 	_old_pos = Status->curentPos;
@@ -188,8 +195,8 @@ void ArmMotor::_run(uint8_t direction)
 {
 	if ( Status->direction != direction )
 	{
-		AF_DCMotor::setSpeed(SPEED);
-		AF_DCMotor::run( direction );
+		AF_DCMotor::setSpeed(DEFAULT_MOTOR_SPEED);
+		AF_DCMotor::run(direction);
 		Status->direction = direction;
 	}
 }
@@ -198,7 +205,75 @@ int16_t ArmMotor::setPosition(int16_t position) {
 	return constrain(position, Params->minPosition, Params->maxPosition);
 }
 
-void ArmMotor::calculateSpeed()
+
+
+/*
+ *
+ *  Class for control the arm grip
+ *
+ */
+
+#define GRIP_PWM_PIN	10  // use only pwm pins
+#define GRIP_DIR_PIN	9
+#define GRIP_INT_PIN	2
+
+
+ArmGrip::ArmGrip(uint8_t freq)
 {
-	//AF_DCMotor::setSpeed( x * 255 / 1024 ; );
+	// setup pin mode
+	pinMode(GRIP_PWM_PIN, OUTPUT);
+	pinMode(GRIP_DIR_PIN, OUTPUT);
+
+	// setup interrupt pin (int0 = pin 2 )
+	attachInterrupt(0, ArmGrip::onInterput, FALLING);
 }
+
+
+void ArmGrip::run(uint8_t dir)
+{
+	switch (dir) {
+	case FORWARD:
+		digitalWrite(GRIP_DIR_PIN, HIGH);
+		powerOn();
+		break;
+	case BACKWARD:
+		digitalWrite(GRIP_DIR_PIN, LOW);
+		powerOn();
+		break;
+	case BRAKE:
+		powerOff();
+		break;
+	}
+}
+
+void ArmGrip::onInterput()
+{
+	run(BRAKE);
+}
+
+
+void ArmGrip::powerOn()
+{
+	/* sbi(TCCR1A, COM1A1);
+	 * OCR1A = DEFAULT_GRIP_SPEED; */
+
+	analogWrite(GRIP_PWM_PIN, DEFAULT_GRIP_SPEED);
+}
+
+void ArmGrip::powerOff()
+{
+	/*  from wiring_digital.c : turnOffPWM(uint8_t timer)
+	 *
+     *  case TIMER1A:  cbi(TCCR1A, 	COM1A1);    break;
+     *  case TIMER1B:  cbi(TCCR1A,  COM1B1);    break;
+     *
+     *  or you can use digitalWrite(pin, LOW)
+     *  or analogWrite(pin, LOW)  */
+
+	digitalWrite(GRIP_PWM_PIN, LOW);
+}
+
+
+
+
+

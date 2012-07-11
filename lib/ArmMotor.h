@@ -1,8 +1,8 @@
 /*
  * ArmMotor.h
  *
- *  Created on: 7 апр. 2012
- *      Author: adik
+ * Author: smirnov.arkady@gmail.com
+ *
  */
 
 #ifndef ARMMOTOR_H_
@@ -48,7 +48,7 @@ struct ArmMotorStatus {
 class ArmMotor : public AF_DCMotor
 {
  public:
-	ArmMotor(const ArmMotorParams *, ArmMotorStatus *, uint8_t freq = MOTOR12_2KHZ);
+	ArmMotor(const ArmMotorParams *, ArmMotorStatus *, uint8_t freq = MOTOR12_8KHZ);
 
 	void check();
 	void park();
@@ -58,10 +58,8 @@ class ArmMotor : public AF_DCMotor
 	void release();
 	void brake();
 
-
 	//
 	void go();
-	void calculateSpeed();
 
  private:
 	void 	_run(uint8_t);
@@ -74,5 +72,15 @@ class ArmMotor : public AF_DCMotor
 	int16_t _old_pos;
 };
 
+
+class ArmGrip {
+ public:
+	ArmGrip(uint8_t freq = MOTOR12_8KHZ);
+	void run(uint8_t);
+	static void onInterput() ;
+ private:
+	void powerOn();
+	void powerOff();
+};
 
 #endif /* ARMMOTOR_H_ */
